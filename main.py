@@ -1,4 +1,5 @@
 from collections import deque
+from collections import deque
 
 class Graph:
     def __init__(self):
@@ -70,8 +71,6 @@ class game_algorithms:
                     frontiers_queue.append((new_state, new_path))
         return None
 
-    from collections import deque
-
     def dfs(self, max_depth=None):
         frontiers_stack = deque([(self.board.initial_state, [], 0)])
         explore_set = set()
@@ -91,10 +90,13 @@ class game_algorithms:
                         frontiers_stack.append((new_state, new_path, depth + 1))
         return None
 
-    def ldfs(self):
-        pass
-    def a(self):
-      pass
+    def idfs(self,max_depth):
+        for i in range(max_depth+1):
+            solution_path_idfs=self.dfs(max_depth=i)
+            if solution_path_idfs:
+                return solution_path_idfs,i
+        return None
+
     def manhattan_distance(self):
         pass
     def euclidean_distance(self):
@@ -114,7 +116,15 @@ game = game_algorithms(board)
 # Call DFS with a max depth of 10
 solution_path_dfs = game.dfs(max_depth=20)
 
-# Output the solution path, if found
+solution_path_idfs,level=game.idfs(max_depth=20)
+
+if solution_path_idfs:
+    print("Solution found:")
+    game.trace_game_board(solution_path_dfs)
+else:
+    print("No solution found.")
+
+Output the solution path, if found
 if solution_path_dfs:
     print("Solution found:")
     game.trace_game_board(solution_path_dfs)
