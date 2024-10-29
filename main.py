@@ -1,26 +1,15 @@
 from collections import deque
 
-class Graph:
-    def __init__(self):
-        self.vertices = {}
-
-    def add_vertex(self, state):
-        state_tuple = tuple(tuple(row) for row in state)
-        if state_tuple not in self.vertices:
-            new_vertex = Vertex(state)
-            self.vertices[state_tuple] = new_vertex
-        return self.vertices[state_tuple]
-
-
-class Vertex:
-    def __init__(self, state):
+class Node:
+    def __init__(self, state, parent=None, depth=0):
         self.state = state
-        self.visited = False
-        self.neighbours = []
+        self.parent = parent
+        self.depth = depth
 
-class board:
-    def __init__(self, initial_state):
-        self.initial_state = initial_state
+class Board:
+    def __init__(self, root):
+        self.root = root
+        self.initial_state = root.state
         self.goal_state = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
         self.size = 3
 
@@ -30,93 +19,104 @@ class board:
                 if state[i][j] == 0:
                     return i, j
 
-    def print_board(self, state):
-        for row in state:
-            print(row)
-        print("----------")
-
-    def get_possible_moves(self, state):
+    def get_possible_moves(self, node):
         moves = []
-        x, y = self.find_blank_tile(state)
+        x, y = self.find_blank_tile(node.state)
         directions = {'Up': (-1, 0), 'Down': (1, 0), 'Left': (0, -1), 'Right': (0, 1)}
+
         for move, (dx, dy) in directions.items():
             new_x, new_y = x + dx, y + dy
             if 0 <= new_x < self.size and 0 <= new_y < self.size:
-                new_state = [row[:] for row in state]
+                new_state = [row[:] for row in node.state]
                 new_state[x][y], new_state[new_x][new_y] = new_state[new_x][new_y], new_state[x][y]
-                moves.append((new_state, move))
+                moves.append(Node(new_state, parent=node, depth=node.depth + 1))
+
         return moves
 
-class game_algorithms:
+
+class GameAlgorithms:
     def __init__(self, board):
         self.board = board
 
-    def goalTest(self, currentState):
-        return currentState == self.board.goal_state
+    def get_path_to_goal(self, node):  # takes the goal node to get the full path by tracing the parent node
+        path_to_goal = []
+        while node:
+            path_to_goal.append(node.state)
+            node = node.parent
+        return path_to_goal[::-1]  # Reverse to get the path from start to goal
+
+    def goal_test(self, current_state):
+        return current_state == self.board.goal_state
 
     def bfs(self):
-        frontiers_queue = deque([(self.board.initial_state, [])])
+        frontiers_queue = deque([Node(self.board.initial_state)])
         explored_set = set()
         while frontiers_queue:
-            current_state, path = frontiers_queue.popleft()
-            if self.goalTest(current_state):
-                self.trace_game_board(path + [current_state])
-                return path
-            state_tuple = tuple(tuple(row) for row in current_state)
-            if state_tuple not in explored_set:
-                explored_set.add(state_tuple)
-                for new_state, move in self.board.get_possible_moves(current_state):
-                    new_path = path + [new_state]
-                    frontiers_queue.append((new_state, new_path))
+            current_node = frontiers_queue.popleft()
+            current_state_tuple = tuple(tuple(row) for row in current_node.state)
+            if self.goal_test(current_node.state):
+                return self.get_path_to_goal(current_node)
+            if current_state_tuple not in explored_set:
+                explored_set.add(current_state_tuple)
+                for new_neighbor_node in self.board.get_possible_moves(current_node):
+                    new_state_tuple = tuple(tuple(row) for row in new_neighbor_node.state)
+                    if new_state_tuple not in explored_set:
+                        frontiers_queue.append(new_neighbor_node)
         return None
-
-    from collections import deque
 
     def dfs(self, max_depth=None):
-        frontiers_stack = deque([(self.board.initial_state, [], 0)])
-        explore_set = set()
-
+        frontiers_stack = [Node(self.board.initial_state)]
+        explored_set = set()
         while frontiers_stack:
-            current_state, path, depth = frontiers_stack.pop()
-            if self.goalTest(current_state):
-                self.trace_game_board(path + [current_state])
-                return path
-
-            state_tuple = tuple(tuple(row) for row in current_state)
-            if state_tuple not in explore_set:
-                explore_set.add(state_tuple)
-                if max_depth is None or depth < max_depth:
-                    for new_state, move in self.board.get_possible_moves(current_state):
-                        new_path = path + [new_state]
-                        frontiers_stack.append((new_state, new_path, depth + 1))
+            current_node = frontiers_stack.pop()
+            current_state_tuple = tuple(tuple(row) for row in current_node.state)
+            if self.goal_test(current_node.state):
+                return self.get_path_to_goal(current_node)
+            if current_state_tuple not in explored_set:
+                explored_set.add(current_state_tuple)
+                if max_depth is None or current_node.depth < max_depth:
+                    for new_neighbor_node in self.board.get_possible_moves(current_node):
+                        new_state_tuple = tuple(tuple(row) for row in new_neighbor_node.state)
+                        if new_state_tuple not in explored_set:
+                            frontiers_stack.append(new_neighbor_node)
         return None
 
-    def ldfs(self):
-        pass
-    def a(self):
-      pass
-    def manhattan_distance(self):
-        pass
-    def euclidean_distance(self):
-        pass
+    def idfs(self, max_depth):
+        for depth_limit in range(max_depth + 1):
+            solution_path_idfs = self.dfs(max_depth=depth_limit)
+            if solution_path_idfs:
+                return solution_path_idfs, depth_limit
+        return None
 
-    def trace_game_board(self, path):
-        print("Tracing steps to goal:")
-        for state in path:
-            self.board.print_board(state)
-#main
-# Main
-# Main
+    def print_goal_path(self, path):
+        if path:
+            print("Path to Goal:")
+            for step in path:
+                for row in step:
+                    print(row)
+                print("------")
+        else:
+            print("No solution found.")
+
+
+# Example usage
 initial_state = [[1, 2, 5], [3, 4, 0], [6, 7, 8]]
-board = board(initial_state)
-game = game_algorithms(board)
+root_node = Node(initial_state)
+board = Board(root_node)
+algorithms = GameAlgorithms(board)
 
-# Call DFS with a max depth of 10
-solution_path_dfs = game.dfs(max_depth=20)
+# Test BFS
+print("BFS Solution:")
+goal_path_bfs = algorithms.bfs()
+algorithms.print_goal_path(goal_path_bfs)
 
-# Output the solution path, if found
-if solution_path_dfs:
-    print("Solution found:")
-    game.trace_game_board(solution_path_dfs)
-else:
-    print("No solution found.")
+# Test DFS
+print("\nDFS Solution:")
+goal_path_dfs = algorithms.dfs()
+algorithms.print_goal_path(goal_path_dfs)
+
+# Test IDFS
+print("\nIDFS Solution:")
+goal_path_idfs, depth_used = algorithms.idfs(max_depth=20)
+print(f"Depth used in IDFS: {depth_used}")
+algorithms.print_goal_path(goal_path_idfs)
